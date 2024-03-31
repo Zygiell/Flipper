@@ -1,0 +1,15 @@
+C:\Users\Zygiel\source\repos\Flipper\Flipper\bin\Debug\net6.0\Flipper.exe
+C:\Users\Zygiel\source\repos\Flipper\Flipper\bin\Debug\net6.0\Flipper.deps.json
+C:\Users\Zygiel\source\repos\Flipper\Flipper\bin\Debug\net6.0\Flipper.runtimeconfig.json
+C:\Users\Zygiel\source\repos\Flipper\Flipper\bin\Debug\net6.0\Flipper.dll
+C:\Users\Zygiel\source\repos\Flipper\Flipper\bin\Debug\net6.0\Flipper.pdb
+C:\Users\Zygiel\source\repos\Flipper\Flipper\obj\Debug\net6.0\Flipper.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Zygiel\source\repos\Flipper\Flipper\obj\Debug\net6.0\Flipper.AssemblyInfoInputs.cache
+C:\Users\Zygiel\source\repos\Flipper\Flipper\obj\Debug\net6.0\Flipper.AssemblyInfo.cs
+C:\Users\Zygiel\source\repos\Flipper\Flipper\obj\Debug\net6.0\Flipper.csproj.CoreCompileInputs.cache
+C:\Users\Zygiel\source\repos\Flipper\Flipper\obj\Debug\net6.0\Flipper.dll
+C:\Users\Zygiel\source\repos\Flipper\Flipper\obj\Debug\net6.0\refint\Flipper.dll
+C:\Users\Zygiel\source\repos\Flipper\Flipper\obj\Debug\net6.0\Flipper.pdb
+C:\Users\Zygiel\source\repos\Flipper\Flipper\obj\Debug\net6.0\Flipper.genruntimeconfig.cache
+C:\Users\Zygiel\source\repos\Flipper\Flipper\obj\Debug\net6.0\ref\Flipper.dll
+C:\Users\Zygiel\source\repos\Flipper\Flipper\bin\Debug\net6.0\config.json
