@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text;
 using System.Media;
+using YamlDotNet.Serialization;
 
 var client = new HttpClient();
 Console.WriteLine("PoE Flipper: live search spammer by ZGL feat. BTN");
@@ -10,7 +11,7 @@ Console.WriteLine("Do you want to use Config from config file? 1 - YES, any othe
 var choice = Console.ReadLine();
 if (choice == "1")
 {
-    if (!LoadConfigFromFile("config.json"))
+    if (!LoadConfigFromFile("config.yaml"))
     {
         Console.WriteLine("Failed to load config from file, please enter configuration manually.");
         await PromptForConfiguration();
@@ -47,8 +48,16 @@ bool LoadConfigFromFile(string filePath)
 
     try
     {
-        string json = File.ReadAllText(filePath);
-        var configData = JsonSerializer.Deserialize<ConfigData>(json);
+        // Załaduj plik YAML
+        string yaml = File.ReadAllText(filePath);
+
+        // Utwórz deserializator z konwencją nazewnictwa, która pasuje do Twojego stylu w YAML
+        var deserializer = new DeserializerBuilder()            
+            .Build();
+
+        // Deserializuj dane z pliku YAML do obiektu configData
+        var configData = deserializer.Deserialize<ConfigData>(yaml);
+
         if (configData != null)
         {
             Config.LeagueName = configData.LeagueName;
@@ -59,6 +68,19 @@ bool LoadConfigFromFile(string filePath)
             return true;
         }
         return false;
+
+        //string json = File.ReadAllText(filePath);
+        //var configData = JsonSerializer.Deserialize<ConfigData>(json);
+        //if (configData != null)
+        //{
+        //    Config.LeagueName = configData.LeagueName;
+        //    Config.SearchSuffix = configData.SearchSuffix;
+        //    Config.Cookie = configData.Cookie;
+        //    Config.Initialized = true;
+        //    Config.PlayNotificationSoundOnWhisper = configData.PlayNotificationSoundOnWhisper;
+        //    return true;
+        //}
+        //return false;
     }
     catch (Exception ex)
     {
