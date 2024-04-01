@@ -48,14 +48,9 @@ bool LoadConfigFromFile(string filePath)
 
     try
     {
-        // Załaduj plik YAML
         string yaml = File.ReadAllText(filePath);
-
-        // Utwórz deserializator z konwencją nazewnictwa, która pasuje do Twojego stylu w YAML
         var deserializer = new DeserializerBuilder()            
             .Build();
-
-        // Deserializuj dane z pliku YAML do obiektu configData
         var configData = deserializer.Deserialize<ConfigData>(yaml);
 
         if (configData != null)
@@ -68,19 +63,6 @@ bool LoadConfigFromFile(string filePath)
             return true;
         }
         return false;
-
-        //string json = File.ReadAllText(filePath);
-        //var configData = JsonSerializer.Deserialize<ConfigData>(json);
-        //if (configData != null)
-        //{
-        //    Config.LeagueName = configData.LeagueName;
-        //    Config.SearchSuffix = configData.SearchSuffix;
-        //    Config.Cookie = configData.Cookie;
-        //    Config.Initialized = true;
-        //    Config.PlayNotificationSoundOnWhisper = configData.PlayNotificationSoundOnWhisper;
-        //    return true;
-        //}
-        //return false;
     }
     catch (Exception ex)
     {
