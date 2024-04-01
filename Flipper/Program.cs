@@ -1,6 +1,7 @@
 ﻿using System.Net.WebSockets;
 using System.Text.Json;
 using System.Text;
+using System.Media;
 
 var client = new HttpClient();
 Console.WriteLine("PoE Flipper: live search spammer by ZGL feat. BTN");
@@ -21,19 +22,22 @@ else
 }
 
 await ConnectAndMonitorWebSocket(Config.LeagueName, Config.SearchSuffix, Config.Cookie);
+    
 
-static async Task PromptForConfiguration()
+    static async Task PromptForConfiguration()
 {
     Console.WriteLine("League name case sensitive e.g. : Necropolis");
     Config.LeagueName = Console.ReadLine();
-    Console.WriteLine("Search suffix");
-    Config.SearchSuffix = Console.ReadLine();
+    Console.WriteLine("Enter search suffixes, separated by commas WITHOUT WHITE SPACES!!!");
+    Config.SearchSuffix = new List<string>(Console.ReadLine().Split(','));
     Console.WriteLine("Cookie from poe trade");
     Config.Cookie = Console.ReadLine();
+    Console.WriteLine("Do you want to hear notification sound on sent whisper? 1 - yes Any other NO");
+    Config.PlayNotificationSoundOnWhisper = Console.ReadLine() == "1" ? true : false;
     Config.Initialized = true;
 }
 
-static bool LoadConfigFromFile(string filePath)
+bool LoadConfigFromFile(string filePath)
 {
     if (!File.Exists(filePath))
     {
@@ -51,6 +55,7 @@ static bool LoadConfigFromFile(string filePath)
             Config.SearchSuffix = configData.SearchSuffix;
             Config.Cookie = configData.Cookie;
             Config.Initialized = true;
+            Config.PlayNotificationSoundOnWhisper = configData.PlayNotificationSoundOnWhisper;
             return true;
         }
         return false;
@@ -61,17 +66,29 @@ static bool LoadConfigFromFile(string filePath)
         return false;
     }
 }
-async Task ConnectAndMonitorWebSocket(string leagueName, string searchSuffix, string cookie)
+
+async Task ConnectAndMonitorWebSocket(string leagueName, List<string> searchSuffixes, string cookie)
 {
-    var uri = $"wss://www.pathofexile.com/api/trade/live/{leagueName}/{searchSuffix}";
-    using (var ws = new ClientWebSocket())
+    foreach (var searchSuffix in searchSuffixes)
     {
-        ws.Options.SetRequestHeader("Cookie", cookie);
-        SetWebSocketHeaders(ws);
-        await ws.ConnectAsync(new Uri(uri), CancellationToken.None);
-        Console.WriteLine("Connected!");
-        await ReceiveMessages(ws, cookie, searchSuffix, leagueName);
+        if (String.IsNullOrEmpty(searchSuffix))
+            return;
+        _ = Task.Run(async () =>
+        {
+            var uri = $"wss://www.pathofexile.com/api/trade/live/{leagueName}/{searchSuffix}";
+            using (var ws = new ClientWebSocket())
+            {
+                ws.Options.SetRequestHeader("Cookie", cookie);
+                SetWebSocketHeaders(ws);
+                await ws.ConnectAsync(new Uri(uri), CancellationToken.None);
+                Console.WriteLine($"Connected to {searchSuffix}!");
+                await ReceiveMessages(ws, cookie, searchSuffix, leagueName);
+            }
+        });
     }
+
+    Console.WriteLine("Attempting to connect, press any key to terminate app anytime!");
+    Console.ReadKey();
 }
 
 void SetWebSocketHeaders(ClientWebSocket ws)
@@ -99,6 +116,7 @@ async Task ReceiveMessages(ClientWebSocket ws, string cookie, string searchSuffi
         }
     }
 }
+
 
 async Task ProcessMessage(string message, string cookie, string searchSuffix, string leagueName)
 {
@@ -158,6 +176,10 @@ async Task ParseAndSendWhisper(string responseBody, string cookie, string search
                 var whisperToken = whisperTokenElement.GetString();
                 await SendWhisper(whisperToken, cookie, searchSuffix, leagueName);
             }
+            else 
+            {
+                Console.WriteLine("Player offline");
+            }
         }
     }
 }
@@ -178,9 +200,27 @@ async Task SendWhisper(string whisperToken, string cookie, string searchSuffix, 
         response.EnsureSuccessStatusCode();
         var responseBody = await response.Content.ReadAsStringAsync();
         Console.WriteLine($"Whisper Sent: {responseBody}");
+        if (Config.PlayNotificationSoundOnWhisper)        
+            PlaySound();        
     }
     catch (HttpRequestException e)
     {
         Console.WriteLine($"Error sending whisper: {e.Message}");
+    }
+}
+
+void PlaySound()
+{
+    try
+    {
+        using (var player = new SoundPlayer(@"pulse.wav"))
+        {
+            player.Load();
+            player.Play();
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Cant play sound: {ex.Message}");
     }
 }

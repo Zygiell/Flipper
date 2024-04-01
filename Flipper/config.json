@@ -1,5 +1,10 @@
 {
-    "LeagueName": "LEAGUE_NAME_CASE_SENSITIVE",
-    "SearchSuffix": "SEARCH_SUFFIX",
-    "Cookie": "COOKIE"
+    "LeagueName": "LEAGUE_NAME",
+    "SearchSuffix": [
+        "SEARCH_SUFFIX",
+        "",
+        ""
+    ],
+    "Cookie": "YOUR_COOKIE_HERE",
+    "PlayNotificationSoundOnWhisper": true
 }
