@@ -13,5 +13,4 @@ public class ConfigData
     public List<string> SearchSuffix { get; set; } = new List<string>();
     public string Cookie { get; set; }
     public bool PlayNotificationSoundOnWhisper { get; set; } = true;
-
 }

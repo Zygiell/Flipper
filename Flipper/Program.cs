@@ -1,7 +1,8 @@
-﻿using System.Net.WebSockets;
-using System.Text.Json;
+﻿using System.Media;
+using System.Net.WebSockets;
 using System.Text;
-using System.Media;
+using System.Text.Json;
+using Flipper;
 using YamlDotNet.Serialization;
 
 var client = new HttpClient();
@@ -13,7 +14,7 @@ if (choice == "1")
 {
     if (!LoadConfigFromFile("config.yaml"))
     {
-        Console.WriteLine("Failed to load config from file, please enter configuration manually.");
+        PrintWithColor("Failed to load config from file, please enter configuration manually.", ConsoleColor.Red);
         await PromptForConfiguration();
     }
 }
@@ -23,9 +24,8 @@ else
 }
 
 await ConnectAndMonitorWebSocket(Config.LeagueName, Config.SearchSuffix, Config.Cookie);
-    
 
-    static async Task PromptForConfiguration()
+static async Task PromptForConfiguration()
 {
     Console.WriteLine("League name case sensitive e.g. : Necropolis");
     Config.LeagueName = Console.ReadLine();
@@ -42,14 +42,14 @@ bool LoadConfigFromFile(string filePath)
 {
     if (!File.Exists(filePath))
     {
-        Console.WriteLine($"Config file not found: {filePath}");
+        PrintWithColor($"Config file not found: {filePath}", ConsoleColor.Red);
         return false;
     }
 
     try
     {
         string yaml = File.ReadAllText(filePath);
-        var deserializer = new DeserializerBuilder()            
+        var deserializer = new DeserializerBuilder()
             .Build();
         var configData = deserializer.Deserialize<ConfigData>(yaml);
 
@@ -66,7 +66,7 @@ bool LoadConfigFromFile(string filePath)
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error reading config file: {ex.Message}");
+        PrintWithColor($"Error reading config file: {ex.Message}", ConsoleColor.Red);
         return false;
     }
 }
@@ -85,13 +85,13 @@ async Task ConnectAndMonitorWebSocket(string leagueName, List<string> searchSuff
                 ws.Options.SetRequestHeader("Cookie", cookie);
                 SetWebSocketHeaders(ws);
                 await ws.ConnectAsync(new Uri(uri), CancellationToken.None);
-                Console.WriteLine($"Connected to {searchSuffix}!");
+                PrintWithColor($"Connected to {searchSuffix}!", ConsoleColor.Green);
                 await ReceiveMessages(ws, cookie, searchSuffix, leagueName);
             }
         });
     }
 
-    Console.WriteLine("Attempting to connect, press any key to terminate app anytime!");
+    PrintWithColor("Attempting to connect, press any key to terminate app anytime!", ConsoleColor.Yellow);
     Console.ReadKey();
 }
 
@@ -115,12 +115,11 @@ async Task ReceiveMessages(ClientWebSocket ws, string cookie, string searchSuffi
         else
         {
             var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-            Console.WriteLine($"Received: {message}");
+            PrintWithColor($"Received: {message}", ConsoleColor.Green);
             await ProcessMessage(message, cookie, searchSuffix, leagueName);
         }
     }
 }
-
 
 async Task ProcessMessage(string message, string cookie, string searchSuffix, string leagueName)
 {
@@ -160,12 +159,23 @@ async Task ProcessHttpRequest(HttpRequestMessage request, string leagueName, str
         var response = await client.SendAsync(request);
         response.EnsureSuccessStatusCode();
         var responseBody = await response.Content.ReadAsStringAsync();
-        Console.WriteLine($"Trade Data: {responseBody}");
+
+        var tradeData = ParseTradeData(responseBody);
+        if (tradeData != null)
+        {
+            string itemNamePart = !string.IsNullOrEmpty(tradeData.Name) ? $"Item name: {tradeData.Name}, " : "";
+            PrintWithColor($"Player: @{tradeData.Seller} || {itemNamePart}{tradeData.TypeLine} || Price: {tradeData.Amount} {tradeData.Currency} || Quantity: {tradeData.Quantity} || Full stack price: {tradeData.FullStackPrice} ||", ConsoleColor.Blue);
+        }
+        else
+        {
+            PrintWithColor("Player offline or no data available.", ConsoleColor.Red);
+        }
+
         await ParseAndSendWhisper(responseBody, cookie, searchSuffix, leagueName);
     }
-    catch (HttpRequestException e)
+    catch (Exception ex)
     {
-        Console.WriteLine($"Error fetching trade data: {e.Message}");
+        PrintWithColor($"An error occurred: {ex.Message}", ConsoleColor.Red);
     }
 }
 
@@ -180,9 +190,9 @@ async Task ParseAndSendWhisper(string responseBody, string cookie, string search
                 var whisperToken = whisperTokenElement.GetString();
                 await SendWhisper(whisperToken, cookie, searchSuffix, leagueName);
             }
-            else 
+            else
             {
-                Console.WriteLine("Player offline");
+                PrintWithColor("Player offline", ConsoleColor.Red);
             }
         }
     }
@@ -203,13 +213,13 @@ async Task SendWhisper(string whisperToken, string cookie, string searchSuffix, 
         var response = await client.SendAsync(request);
         response.EnsureSuccessStatusCode();
         var responseBody = await response.Content.ReadAsStringAsync();
-        Console.WriteLine($"Whisper Sent: {responseBody}");
-        if (Config.PlayNotificationSoundOnWhisper)        
-            PlaySound();        
+        PrintWithColor($"Whisper Sent: {responseBody}", ConsoleColor.Green);
+        if (Config.PlayNotificationSoundOnWhisper)
+            PlaySound();
     }
     catch (HttpRequestException e)
     {
-        Console.WriteLine($"Error sending whisper: {e.Message}");
+        PrintWithColor($"Error sending whisper: {e.Message}", ConsoleColor.Red);
     }
 }
 
@@ -225,6 +235,53 @@ void PlaySound()
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Cant play sound: {ex.Message}");
+        PrintWithColor($"Cant play sound: {ex.Message}", ConsoleColor.Red);
     }
+}
+
+TradeData ParseTradeData(string responseBody)
+{
+    using (var doc = JsonDocument.Parse(responseBody))
+    {
+        if (doc.RootElement.TryGetProperty("result", out var result) && result.ValueKind == JsonValueKind.Array && result.GetArrayLength() > 0)
+        {
+            var firstResult = result[0];
+            if (firstResult.GetProperty("listing").TryGetProperty("price", out var price))
+            {
+                var seller = firstResult.GetProperty("listing").GetProperty("account").GetProperty("lastCharacterName").GetString();
+                var amount = price.GetProperty("amount").GetInt32();
+                var currency = price.GetProperty("currency").GetString();
+                if (firstResult.TryGetProperty("item", out var item))
+                {
+                    var name = item.GetProperty("name").GetString();
+                    var typeLine = item.GetProperty("typeLine").GetString();
+
+                    var quantity = 1;
+                    if (item.TryGetProperty("stackSize", out var quantityJsEl) && quantityJsEl.TryGetInt32(out var tempQuantity))
+                        quantity = tempQuantity;
+
+                    var fullStackPrice = quantity * amount;
+
+                    return new TradeData
+                    {
+                        Amount = amount,
+                        Currency = currency,
+                        Name = name,
+                        TypeLine = typeLine,
+                        Quantity = quantity,
+                        FullStackPrice = fullStackPrice,
+                        Seller = seller
+                    };
+                }
+            }
+        }
+    }
+    return null;
+}
+
+static void PrintWithColor(string message, ConsoleColor color)
+{
+    Console.ForegroundColor = color;
+    Console.WriteLine(message);
+    Console.ResetColor();
 }
