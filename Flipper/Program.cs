@@ -249,7 +249,7 @@ TradeData ParseTradeData(string responseBody)
             if (firstResult.GetProperty("listing").TryGetProperty("price", out var price))
             {
                 var seller = firstResult.GetProperty("listing").GetProperty("account").GetProperty("lastCharacterName").GetString();
-                var amount = price.GetProperty("amount").GetInt32();
+                var amount = price.GetProperty("amount").GetDecimal();
                 var currency = price.GetProperty("currency").GetString();
                 if (firstResult.TryGetProperty("item", out var item))
                 {
